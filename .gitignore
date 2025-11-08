@@ -205,3 +205,36 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Acoustic Retrieval Project Specific
+# Large data files
+data/raw_audio/
+data/segmented_audio/
+data/embeddings/
+data/indices/
+data/metadata/*.csv
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+*.npy
+*.npz
+
+# Model files
+models/xlsr-53/
+models/learned_hasher/
+*.pt
+*.pth
+*.bin
+*.ckpt
+*.safetensors
+
+# Jupyter notebooks with outputs
+notebooks/*.ipynb
+
+# Logs
+logs/
+*.log
+
+.DS_Store

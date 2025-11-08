@@ -1,0 +1,25 @@
+# Model Configuration for Acoustic Retrieval
+
+# Available models:
+# - xlsr-53: XLSR-53 (300M params, 1024-D embeddings, 53 languages)
+# - xls-r-300m: XLS-R 300M (300M params, 1024-D embeddings, improved)
+# - xls-r-1b: XLS-R 1B (1B params, 1280-D embeddings, best quality)
+# - xls-r-2b: XLS-R 2B (2B params, 1920-D embeddings, highest quality)
+
+model:
+  # Choose one: xlsr-53, xls-r-300m, xls-r-1b, xls-r-2b
+  type: "xlsr-53"
+
+  # Full Hugging Face model names
+  xlsr-53: "facebook/wav2vec2-large-xlsr-53"
+  xls-r-300m: "facebook/wav2vec2-xls-r-300m"
+  xls-r-1b: "facebook/wav2vec2-xls-r-1b"
+  xls-r-2b: "facebook/wav2vec2-xls-r-2b"
+
+  output_layer: "last_hidden_state"  # Use contextualized embeddings
+
+audio:
+  target_sample_rate: 16000  # Required by all Wav2Vec2 models
+  hop_length: 320            # Effective stride (samples per frame)
+
+device: "cpu"  # Change to "cuda" if GPU available

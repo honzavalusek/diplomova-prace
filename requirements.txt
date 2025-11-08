@@ -1,0 +1,28 @@
+# Core Dependencies for Acoustic Retrieval System
+
+# Feature Extraction (Module 1)
+torch>=2.0.0
+transformers>=4.30.0
+librosa>=0.10.0
+soundfile>=0.12.0  # Required by librosa for audio I/O
+
+# Temporal Matching (Module 3)
+dtaidistance>=2.3.0
+
+# Data Processing
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Indexing (Module 2) - Start with prototype
+datasketch>=1.6.0
+
+# Optional: Production Vector Search (add later)
+# faiss-cpu>=1.7.4  # or faiss-gpu for GPU support
+
+# Utilities
+pyyaml>=6.0
+tqdm>=4.65.0
+
+# Development
+jupyter>=1.0.0
+matplotlib>=3.7.0
