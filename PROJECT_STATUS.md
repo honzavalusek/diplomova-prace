@@ -251,3 +251,11 @@ To extend the system:
 
 **Status:** Ready for real-world testing on small-to-medium corpora (<100 files).
 **Next Milestone:** Implement LSH indexing for large-scale deployment.
+
+
+/Users/janvalusek/Projects/diplomova-prace/src/features/audio_preprocessing.py:24: UserWarning: PySoundFile failed. Trying audioread instead.
+  audio_waveform, sr = librosa.load(audio_path, sr=target_sr)
+/Users/janvalusek/miniconda3/envs/diplomova-prace/lib/python3.13/site-packages/librosa/core/audio.py:184: FutureWarning: librosa.core.audio.__audioread_load
+        Deprecated as of librosa version 0.10.0.
+        It will be removed in librosa version 1.0.
+  y, sr_native = __audioread_load(path, offset, duration, dtype)

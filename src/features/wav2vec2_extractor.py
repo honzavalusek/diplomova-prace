@@ -9,32 +9,31 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class XLSRExtractor:
+class Wav2Vec2Extractor:
     """
-    Extracts contextualized acoustic embeddings using XLS-R models.
+    Extracts contextualized acoustic embeddings using selected model.
 
-    XLS-R (Cross-Lingual Speech Representations) are improved models
-    with more parameters and training data than XLSR-53.
-
-    Available models:
+    Supported models
+    - facebook/wav2vec2-large-xlsr-53 (300M params, 1024-D embeddings)
     - facebook/wav2vec2-xls-r-300m (300M params, 1024-D embeddings)
     - facebook/wav2vec2-xls-r-1b (1B params, 1280-D embeddings)
     - facebook/wav2vec2-xls-r-2b (2B params, 1920-D embeddings)
+    - arampacha/wav2vec2-large-xlsr-czech
+    - fav-kky/wav2vec2-base-cs-80k-ClTRUS
 
     Uses the last_hidden_state output for contextualized embeddings.
     """
 
     def __init__(
         self,
-        model_name: str = "facebook/wav2vec2-xls-r-300m",
+        model_name: str,
         device: Optional[str] = None
     ):
         """
-        Initialize the XLS-R feature extractor.
+        Initialize the Wav2Vec2 feature extractor.
 
         Args:
             model_name: Hugging Face model identifier
-                       Default: "facebook/wav2vec2-xls-r-300m"
             device: Device to run on ('cpu', 'cuda', or None for auto-detect)
         """
         self.model_name = model_name
@@ -45,7 +44,7 @@ class XLSRExtractor:
         else:
             self.device = device
 
-        logger.info(f"Loading XLS-R model: {model_name} on {self.device}")
+        logger.info(f"Loading model: {model_name} on {self.device}")
 
         # Load feature extractor and model
         self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(model_name)
@@ -56,7 +55,7 @@ class XLSRExtractor:
         # Auto-detect embedding dimension from model config
         self._embedding_dim = self.model.config.hidden_size
 
-        logger.info(f"XLS-R model loaded successfully (embedding_dim={self._embedding_dim})")
+        logger.info(f"Model loaded successfully (embedding_dim={self._embedding_dim})")
 
     def extract(
         self,
@@ -72,15 +71,12 @@ class XLSRExtractor:
 
         Returns:
             Embeddings array of shape (sequence_length, embedding_dim)
-            - 300M model: (sequence_length, 1024)
-            - 1B model: (sequence_length, 1280)
-            - 2B model: (sequence_length, 1920)
 
         Raises:
             ValueError: If sample rate is not 16000
         """
         if sample_rate != 16000:
-            raise ValueError(f"XLS-R requires 16000 Hz, got {sample_rate} Hz")
+            raise ValueError(f"Wav2Vec models require 16000 Hz, got {sample_rate} Hz")
 
         # Encode audio to model input format
         inputs = self.feature_extractor(
@@ -113,16 +109,12 @@ class XLSRExtractor:
     def embedding_dim(self) -> int:
         """
         Returns the dimensionality of the embeddings.
-
-        - 300M model: 1024
-        - 1B model: 1280
-        - 2B model: 1920
         """
         return self._embedding_dim
 
     @property
     def hop_length(self) -> int:
         """
-        Returns the hop length in samples (320 for all XLS-R models).
+        Returns the hop length in samples (320 for all models).
         """
         return 320
