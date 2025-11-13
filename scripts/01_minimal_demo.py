@@ -23,7 +23,12 @@ from src.features import Wav2Vec2Extractor, load_audio, frames_to_seconds
 from src.features.speaker_normalization import apply_normalization
 from src.matching import SubsequenceDTWMatcher, MatchResult
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s: %(message)s',
+    force=True,
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 logger = logging.getLogger(__name__)
 
 
@@ -77,7 +82,7 @@ def main():
     logger.info(f"\n[1/4] Initializing {args.model} feature extractor...")
     logger.info(f"  Model: {model_name}")
 
-    extractor = Wav2Vec2Extractor(model_name=model_name, device=args.device)
+    extractor = Wav2Vec2Extractor(model_name=model_name, device=args.device, use_last_x_layers=10, use_half_precision=True)
     logger.info(f"  Embedding dimension: {extractor.embedding_dim}")
 
     # Step 2: Extract query embeddings
