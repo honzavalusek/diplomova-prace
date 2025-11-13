@@ -7,7 +7,7 @@ librosa>=0.10.0
 soundfile>=0.12.0  # Required by librosa for audio I/O
 
 # Temporal Matching (Module 3)
-dtaidistance>=2.3.0
+dtaidistance>=2.3.0  # Subsequence DTW with window constraints
 
 # Data Processing
 numpy>=1.24.0

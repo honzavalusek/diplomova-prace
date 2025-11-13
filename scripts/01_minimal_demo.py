@@ -49,6 +49,9 @@ def main():
     parser.add_argument('--normalize', type=str, default='none',
                         choices=['none', 'mvn', 'cmn'],
                         help='Speaker normalization method (mvn=mean-variance, cmn=cepstral-mean, none=disabled)')
+    parser.add_argument('--window', type=int, default=None,
+                        help='Sakoe-Chiba window constraint for DTW (limits temporal deviation). '
+                             'Typical values: 10-50 frames for speech. If not set, no constraint is used.')
 
     args = parser.parse_args()
 
@@ -102,7 +105,7 @@ def main():
 
     # Step 3: Extract corpus embeddings and search
     logger.info(f"\n[3/4] Processing {len(corpus_paths)} corpus file(s)...")
-    matcher = SubsequenceDTWMatcher()
+    matcher = SubsequenceDTWMatcher(window=args.window)
 
     # Store results per file: {file_path: [list of matches]}
     results_by_file = {}

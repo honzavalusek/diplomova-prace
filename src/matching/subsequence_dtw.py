@@ -2,14 +2,11 @@
 
 import numpy as np
 from dataclasses import dataclass
-from typing import Optional, Tuple
-import logging
+from typing import Optional, Tuple, List
 
-try:
-    from dtaidistance.subsequence.dtw import subsequence_alignment
-    DTAIDISTANCE_AVAILABLE = True
-except ImportError:
-    DTAIDISTANCE_AVAILABLE = False
+from dtaidistance.subsequence import SubsequenceAlignment
+from dtaidistance.subsequence.dtw import subsequence_alignment
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -42,30 +39,34 @@ class MatchResult:
 
 class SubsequenceDTWMatcher:
     """
-    Performs high-precision subsequence DTW matching.
+    Performs high-precision subsequence DTW matching using dtaidistance library.
 
     This is the verification stage in the Filter-and-Verify pipeline,
     providing frame-accurate alignment of query within reference sequences.
+
+    Uses dtaidistance's subsequence_alignment for optimal subsequence matching.
     """
 
-    def __init__(self, use_c: bool = True):
+    def __init__(self, use_c: bool = True, window: Optional[int] = None):
         """
         Initialize the subsequence DTW matcher.
 
         Args:
             use_c: Use C-optimized implementation if available (faster)
+            window: Sakoe-Chiba window constraint (limits temporal deviation).
+                   Typical values: 10-50 frames for speech.
+                   None = no constraint (slower, may be less reliable).
 
         Raises:
             ImportError: If dtaidistance is not installed
         """
-        if not DTAIDISTANCE_AVAILABLE:
-            raise ImportError(
-                "dtaidistance is required for DTW matching. "
-                "Install with: pip install dtaidistance"
-            )
-
         self.use_c = use_c
-        logger.info("Subsequence DTW matcher initialized")
+        self.window = window
+
+        if window is not None:
+            logger.info(f"Subsequence DTW matcher initialized (window={window}, use_c={use_c})")
+        else:
+            logger.info(f"Subsequence DTW matcher initialized (no window constraint, use_c={use_c})")
 
     def match(
         self,
@@ -74,19 +75,20 @@ class SubsequenceDTWMatcher:
         window: Optional[int] = None
     ) -> MatchResult:
         """
-        Find the best match of query within reference using S-DTW.
+        Find the best match of query within reference using subsequence DTW.
 
         Args:
             query: Query embedding sequence, shape (N, embedding_dim)
             reference: Reference embedding sequence, shape (M, embedding_dim)
                       where M >> N (reference is much longer)
-            window: Optional Sakoe-Chiba window constraint (reduces computation)
+            window: Optional Sakoe-Chiba window constraint (reduces computation).
+                   If None, uses the instance default from __init__.
 
         Returns:
             MatchResult with distance and frame boundaries
 
         Example:
-            >>> matcher = SubsequenceDTWMatcher()
+            >>> matcher = SubsequenceDTWMatcher(window=25)
             >>> query_emb = np.random.rand(50, 1024)  # 50 frames
             >>> ref_emb = np.random.rand(500, 1024)   # 500 frames
             >>> result = matcher.match(query_emb, ref_emb)
@@ -105,9 +107,12 @@ class SubsequenceDTWMatcher:
                 f"Got query: {query.shape[1]}, reference: {reference.shape[1]}"
             )
 
+        # Use method parameter or fall back to instance default
+        effective_window = window if window is not None else self.window
+
         logger.debug(
             f"Running S-DTW: query shape={query.shape}, "
-            f"reference shape={reference.shape}"
+            f"reference shape={reference.shape}, window={effective_window}"
         )
 
         # Convert to float64 (dtaidistance C library requirement)
@@ -115,7 +120,8 @@ class SubsequenceDTWMatcher:
         reference = reference.astype(np.float64)
 
         # Perform subsequence alignment
-        sa = subsequence_alignment(query, reference, use_c=self.use_c)
+        sa = SubsequenceAlignment(query, reference, penalty=0.1, use_c=self.use_c, window=effective_window)
+        sa.align()
 
         # Get best match
         best = sa.best_match()
@@ -136,8 +142,9 @@ class SubsequenceDTWMatcher:
         query: np.ndarray,
         reference: np.ndarray,
         k: int = 3,
-        min_distance_frames: int = 10
-    ) -> list:
+        min_distance_frames: int = 10,
+        window: Optional[int] = None
+    ) -> List[MatchResult]:
         """
         Find top-k best matches of query within a single reference sequence.
 
@@ -146,6 +153,8 @@ class SubsequenceDTWMatcher:
             reference: Reference embedding sequence, shape (M, embedding_dim)
             k: Number of top matches to return
             min_distance_frames: Minimum distance between matches to avoid overlaps
+            window: Optional Sakoe-Chiba window constraint.
+                   If None, uses the instance default from __init__.
 
         Returns:
             List of MatchResult objects, sorted by distance (best first)
@@ -163,12 +172,19 @@ class SubsequenceDTWMatcher:
                 f"Got query: {query.shape[1]}, reference: {reference.shape[1]}"
             )
 
+        # Use method parameter or fall back to instance default
+        effective_window = window if window is not None else self.window
+
         # Convert to float64
         query = query.astype(np.float64)
         reference = reference.astype(np.float64)
 
-        # Get all kbest matches from dtaidistance
+        # Perform subsequence alignment
         sa = subsequence_alignment(query, reference, use_c=self.use_c)
+
+        # Apply Sakoe-Chiba window constraint if specified
+        if effective_window is not None:
+            sa.settings.window = effective_window
 
         # Get kbest matches (dtaidistance supports this)
         kbest_matches = sa.kbest_matches(k=k * 3)  # Get extra to filter overlaps
@@ -208,7 +224,8 @@ class SubsequenceDTWMatcher:
         self,
         query: np.ndarray,
         references: list,
-        top_k: int = 1
+        top_k: int = 1,
+        window: Optional[int] = None
     ) -> list:
         """
         Match query against multiple reference sequences.
@@ -217,6 +234,8 @@ class SubsequenceDTWMatcher:
             query: Query embedding sequence
             references: List of reference embedding sequences
             top_k: Return top-k best matches
+            window: Optional Sakoe-Chiba window constraint.
+                   If None, uses the instance default from __init__.
 
         Returns:
             List of (index, MatchResult) tuples, sorted by distance
@@ -225,7 +244,7 @@ class SubsequenceDTWMatcher:
 
         for idx, ref in enumerate(references):
             try:
-                match = self.match(query, ref)
+                match = self.match(query, ref, window=window)
                 results.append((idx, match))
             except Exception as e:
                 logger.warning(f"Failed to match reference {idx}: {e}")
@@ -236,30 +255,3 @@ class SubsequenceDTWMatcher:
 
         # Return top-k
         return results[:top_k]
-
-
-def naive_dtw_distance(seq1: np.ndarray, seq2: np.ndarray) -> float:
-    """
-    Simple DTW distance implementation (for testing/fallback).
-
-    Args:
-        seq1: First sequence (N, D)
-        seq2: Second sequence (M, D)
-
-    Returns:
-        DTW distance
-    """
-    n, m = len(seq1), len(seq2)
-    dtw_matrix = np.full((n + 1, m + 1), np.inf)
-    dtw_matrix[0, 0] = 0
-
-    for i in range(1, n + 1):
-        for j in range(1, m + 1):
-            cost = np.linalg.norm(seq1[i - 1] - seq2[j - 1])
-            dtw_matrix[i, j] = cost + min(
-                dtw_matrix[i - 1, j],      # insertion
-                dtw_matrix[i, j - 1],      # deletion
-                dtw_matrix[i - 1, j - 1]   # match
-            )
-
-    return dtw_matrix[n, m]
