@@ -250,7 +250,7 @@ dtaidistance (window=25):   frames 100-129, distance=0.00 ✓ CORRECT
 ## Example: End-to-End
 
 ```python
-from src.features import Wav2Vec2Extractor, load_audio
+from src.features import Wav2Vec2WavLmExtractor, load_audio
 from src.features.speaker_normalization import apply_normalization
 from src.matching import SubsequenceDTWMatcher
 
@@ -259,7 +259,7 @@ query_audio, sr = load_audio("query.wav")
 corpus_audio, sr = load_audio("corpus.wav")
 
 # 2. Extract embeddings
-extractor = Wav2Vec2Extractor(
+extractor = Wav2Vec2WavLmExtractor(
     model_name="fav-kky/wav2vec2-base-cs-80k-ClTRUS",
     use_last_x_layers=10,
     use_half_precision=True

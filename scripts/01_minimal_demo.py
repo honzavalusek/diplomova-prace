@@ -19,7 +19,7 @@ import time
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.features import Wav2Vec2Extractor, load_audio, frames_to_seconds
+from src.features import Wav2Vec2WavLmExtractor, load_audio, frames_to_seconds
 from src.features.speaker_normalization import apply_normalization
 from src.matching import SubsequenceDTWMatcher, MatchResult
 
@@ -44,7 +44,7 @@ def main():
     parser.add_argument('--top-k', type=int, default=3,
                         help='Number of top matches to find per corpus file (default: 3)')
     parser.add_argument('--model', type=str, default='xlsr-53',
-                        choices=['xlsr-53', 'xls-r-300m', 'xls-r-1b', 'xls-r-2b', 'czech', 'czech2'],
+                        choices=['xlsr-53', 'xls-r-300m', 'xls-r-1b', 'xls-r-2b', 'czech', 'czech2', 'wavlm-base', 'wavlm-base-plus', 'wavlm-large'],
                         help='Feature extraction model (default: xlsr-53)')
     parser.add_argument('--normalize', type=str, default='none',
                         choices=['none', 'mvn', 'cmn'],
@@ -81,13 +81,16 @@ def main():
         'xls-r-2b': 'facebook/wav2vec2-xls-r-2b',
         'czech': 'arampacha/wav2vec2-large-xlsr-czech',
         'czech2': 'fav-kky/wav2vec2-base-cs-80k-ClTRUS',
+        'wavlm-base': 'microsoft/wavlm-base',
+        'wavlm-base-plus': 'microsoft/wavlm-base-plus',
+        'wavlm-large': 'microsoft/wavlm-large',
     }
 
     model_name = model_map[args.model]
     logger.info(f"\n[1/4] Initializing {args.model} feature extractor...")
     logger.info(f"  Model: {model_name}")
 
-    extractor = Wav2Vec2Extractor(model_name=model_name, device=args.device, use_last_x_layers=args.layers, use_half_precision=True)
+    extractor = Wav2Vec2WavLmExtractor(model_name=model_name, device=args.device, use_last_x_layers=args.layers, use_half_precision=True)
     logger.info(f"  Embedding dimension: {extractor.embedding_dim}")
 
     # Step 2: Extract query embeddings

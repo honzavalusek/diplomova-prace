@@ -2,14 +2,14 @@
 
 import torch
 import numpy as np
-from transformers import Wav2Vec2FeatureExtractor, Wav2Vec2Model
+from transformers import AutoFeatureExtractor, AutoModel
 from typing import Optional, Union
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class Wav2Vec2Extractor:
+class Wav2Vec2WavLmExtractor:
     """
     Extracts contextualized acoustic embeddings using selected model,
     with support for averaging features across a specified number of
@@ -50,10 +50,10 @@ class Wav2Vec2Extractor:
         logger.info(f"Using precision: {self.dtype}")
 
         # Load feature extractor and model
-        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(model_name)
+        self.feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
 
         # Load model weights, potentially in half-precision
-        self.model = Wav2Vec2Model.from_pretrained(
+        self.model = AutoModel.from_pretrained(
             model_name,
             torch_dtype=self.dtype
         )
