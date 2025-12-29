@@ -47,7 +47,7 @@ class SubsequenceDTWMatcher:
     Uses dtaidistance's subsequence_alignment for optimal subsequence matching.
     """
 
-    def __init__(self, use_c: bool = True, window: Optional[int] = None):
+    def __init__(self, use_c: bool = True, window: Optional[int] = None, use_cosine: bool = True):
         """
         Initialize the subsequence DTW matcher.
 
@@ -56,17 +56,18 @@ class SubsequenceDTWMatcher:
             window: Sakoe-Chiba window constraint (limits temporal deviation).
                    Typical values: 10-50 frames for speech.
                    None = no constraint (slower, may be less reliable).
+            use_cosine: If True, L2-normalize embeddings before DTW to use cosine
+                       distance instead of Euclidean. Recommended for neural embeddings.
 
         Raises:
             ImportError: If dtaidistance is not installed
         """
         self.use_c = use_c
         self.window = window
+        self.use_cosine = use_cosine
 
-        if window is not None:
-            logger.info(f"Subsequence DTW matcher initialized (window={window}, use_c={use_c})")
-        else:
-            logger.info(f"Subsequence DTW matcher initialized (no window constraint, use_c={use_c})")
+        parts = [f"window={window}" if window else "no window", f"use_c={use_c}", f"cosine={use_cosine}"]
+        logger.info(f"Subsequence DTW matcher initialized ({', '.join(parts)})")
 
     def match(
         self,
@@ -118,6 +119,11 @@ class SubsequenceDTWMatcher:
         # Convert to float64 (dtaidistance C library requirement)
         query = query.astype(np.float64)
         reference = reference.astype(np.float64)
+
+        # L2-normalize for cosine distance (Euclidean on unit vectors ∝ cosine distance)
+        if self.use_cosine:
+            query = query / (np.linalg.norm(query, axis=1, keepdims=True) + 1e-8)
+            reference = reference / (np.linalg.norm(reference, axis=1, keepdims=True) + 1e-8)
 
         # Perform subsequence alignment
         sa = SubsequenceAlignment(query, reference, penalty=0.1, use_c=self.use_c, window=effective_window)
@@ -178,6 +184,11 @@ class SubsequenceDTWMatcher:
         # Convert to float64
         query = query.astype(np.float64)
         reference = reference.astype(np.float64)
+
+        # L2-normalize for cosine distance (Euclidean on unit vectors ∝ cosine distance)
+        if self.use_cosine:
+            query = query / (np.linalg.norm(query, axis=1, keepdims=True) + 1e-8)
+            reference = reference / (np.linalg.norm(reference, axis=1, keepdims=True) + 1e-8)
 
         # Perform subsequence alignment
         sa = subsequence_alignment(query, reference, use_c=self.use_c)
