@@ -52,24 +52,36 @@ def feature_warping(embeddings: np.ndarray, window_size: int = 300) -> np.ndarra
         Warped embeddings
     """
     from scipy.stats import norm
+    from scipy.ndimage import uniform_filter1d
 
     seq_len, emb_dim = embeddings.shape
-    warped = np.zeros_like(embeddings)
 
+    # For short sequences, fall back to global ranking (simpler, still fast)
+    if seq_len <= window_size:
+        # Rank each dimension globally
+        ranks = np.argsort(np.argsort(embeddings, axis=0), axis=0).astype(np.float64)
+        percentiles = (ranks + 1) / (seq_len + 1)  # +1 to avoid 0 and 1
+        return norm.ppf(percentiles)
+
+    # For longer sequences, use sliding window approach
+    # Vectorized: process all dimensions at once per frame
+    warped = np.zeros_like(embeddings, dtype=np.float64)
     half_window = window_size // 2
 
     for i in range(seq_len):
-        # Define window
         start = max(0, i - half_window)
         end = min(seq_len, i + half_window + 1)
-
         window = embeddings[start:end]
+        window_len = end - start
 
-        # Rank within window and apply Gaussian CDF
-        for d in range(emb_dim):
-            rank = np.searchsorted(np.sort(window[:, d]), embeddings[i, d])
-            percentile = rank / len(window)
-            warped[i, d] = norm.ppf(percentile + 1e-6)
+        # Vectorized ranking: compare current frame to all window frames
+        # Shape: (window_len, emb_dim) compared to (1, emb_dim) -> (window_len, emb_dim)
+        current = embeddings[i:i+1]  # Keep dims for broadcasting
+        ranks = (window < current).sum(axis=0)  # Count how many are smaller
+
+        # Convert to percentile, avoiding 0 and 1 for ppf stability
+        percentiles = (ranks + 1) / (window_len + 2)
+        warped[i] = norm.ppf(percentiles)
 
     return warped
 

@@ -47,7 +47,7 @@ def main():
                         choices=['xlsr-53', 'xls-r-300m', 'xls-r-1b', 'xls-r-2b', 'czech', 'czech2', 'wavlm-base', 'wavlm-base-plus', 'wavlm-large'],
                         help='Feature extraction model (default: xlsr-53)')
     parser.add_argument('--normalize', type=str, default='none',
-                        choices=['none', 'mvn', 'cmn'],
+                        choices=['none', 'mvn', 'cmn', 'warp'],
                         help='Speaker normalization method (mvn=mean-variance, cmn=cepstral-mean, none=disabled)')
     parser.add_argument('--window', type=int, default=None,
                         help='Sakoe-Chiba window constraint for DTW (limits temporal deviation). '
