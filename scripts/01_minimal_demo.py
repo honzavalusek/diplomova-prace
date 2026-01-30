@@ -52,8 +52,10 @@ def main():
     parser.add_argument('--window', type=int, default=None,
                         help='Sakoe-Chiba window constraint for DTW (limits temporal deviation). '
                              'Typical values: 10-50 frames for speech. If not set, no constraint is used.')
-    parser.add_argument('--layers', type=int, default=1,
-                        help='Number of last transformer layers to use for embeddings (default: 1)')
+    parser.add_argument('--layer-min', type=int, default=None,
+                        help='Minimum layer index (0-based). If set without --layer-max, averages from this layer to the last.')
+    parser.add_argument('--layer-max', type=int, default=None,
+                        help='Maximum layer index (0-based). If set without --layer-min, averages from layer 0 to this layer.')
 
     args = parser.parse_args()
 
@@ -90,7 +92,7 @@ def main():
     logger.info(f"\n[1/4] Initializing {args.model} feature extractor...")
     logger.info(f"  Model: {model_name}")
 
-    extractor = Wav2Vec2WavLmExtractor(model_name=model_name, device=args.device, use_last_x_layers=args.layers, use_half_precision=True)
+    extractor = Wav2Vec2WavLmExtractor(model_name=model_name, device=args.device, layer_min=args.layer_min, layer_max=args.layer_max, use_half_precision=True)
     logger.info(f"  Embedding dimension: {extractor.embedding_dim}")
 
     # Step 2: Extract query embeddings

@@ -258,10 +258,11 @@ from src.matching import SubsequenceDTWMatcher
 query_audio, sr = load_audio("query.wav")
 corpus_audio, sr = load_audio("corpus.wav")
 
-# 2. Extract embeddings
+# 2. Extract embeddings (use layers 2-11 for averaging)
 extractor = Wav2Vec2WavLmExtractor(
     model_name="fav-kky/wav2vec2-base-cs-80k-ClTRUS",
-    use_last_x_layers=10,
+    layer_min=2,
+    layer_max=11,
     use_half_precision=True
 )
 

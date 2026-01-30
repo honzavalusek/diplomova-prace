@@ -12,15 +12,16 @@ logger = logging.getLogger(__name__)
 class Wav2Vec2WavLmExtractor:
     """
     Extracts contextualized acoustic embeddings using selected model,
-    with support for averaging features across a specified number of
-    the final hidden layers.
+    with support for averaging features across a specified range of
+    transformer layers.
     """
 
     def __init__(
         self,
         model_name: str,
         device: Optional[str] = None,
-        use_last_x_layers: Optional[int] = None,
+        layer_min: Optional[int] = None,
+        layer_max: Optional[int] = None,
         use_half_precision: bool = True
     ):
         """
@@ -29,10 +30,18 @@ class Wav2Vec2WavLmExtractor:
         Args:
             model_name: Hugging Face model identifier
             device: Device to run on ('cpu', 'cuda', or None for auto-detect)
-            use_last_x_layers: Number of final hidden layers to average.
-                               If None or 1, only the last layer is used.
+            layer_min: Minimum layer index (0-based, inclusive). If None with
+                       layer_max set, defaults to 0.
+            layer_max: Maximum layer index (0-based, inclusive). If None with
+                       layer_min set, defaults to last layer.
             use_half_precision: Use torch.float16 for weights and computation
                                 (recommended for large models).
+
+        Layer selection behavior:
+            - Both None: Average all layers [0, num_layers-1] (default)
+            - layer_min=M, layer_max=None: Average layers [M, num_layers-1]
+            - layer_min=None, layer_max=X: Average layers [0, X]
+            - layer_min=M, layer_max=X: Average layers [M, X]
         """
         self.model_name = model_name
 
@@ -42,7 +51,8 @@ class Wav2Vec2WavLmExtractor:
         else:
             self.device = device
 
-        self.use_last_x_layers = use_last_x_layers
+        self.layer_min = layer_min
+        self.layer_max = layer_max
         self.use_half_precision = use_half_precision
         self.dtype = torch.float16 if self.use_half_precision and self.device == 'cuda' else torch.float32
 
@@ -67,13 +77,32 @@ class Wav2Vec2WavLmExtractor:
 
         logger.info(f"Model loaded successfully (layers={self._num_layers}, dim={self._embedding_dim})")
 
-        if self.use_last_x_layers is not None and self.use_last_x_layers > 1:
-            if not (1 <= self.use_last_x_layers <= self._num_layers):
+        logger.info(f"Model has {self._num_layers} transformer layers.")
+
+        # Validate layer indices
+        max_layer_idx = self._num_layers - 1
+        if self.layer_min is not None:
+            if not (0 <= self.layer_min <= max_layer_idx):
                 raise ValueError(
-                    f"Invalid layer count: {self.use_last_x_layers}. "
-                    f"Must be between 1 and {self._num_layers} (total layers)."
+                    f"Invalid layer_min: {self.layer_min}. "
+                    f"Must be between 0 and {max_layer_idx}."
                 )
-            logger.info(f"Features will be averaged across the last {self.use_last_x_layers} layers.")
+        if self.layer_max is not None:
+            if not (0 <= self.layer_max <= max_layer_idx):
+                raise ValueError(
+                    f"Invalid layer_max: {self.layer_max}. "
+                    f"Must be between 0 and {max_layer_idx}."
+                )
+        if self.layer_min is not None and self.layer_max is not None:
+            if self.layer_min > self.layer_max:
+                raise ValueError(
+                    f"layer_min ({self.layer_min}) must be <= layer_max ({self.layer_max})."
+                )
+
+        # Log layer selection
+        effective_min = self.layer_min if self.layer_min is not None else 0
+        effective_max = self.layer_max if self.layer_max is not None else max_layer_idx
+        logger.info(f"Features will be averaged across layers {effective_min} to {effective_max}.")
 
 
     def extract(
@@ -82,8 +111,8 @@ class Wav2Vec2WavLmExtractor:
         sample_rate: int = 16000
     ) -> np.ndarray:
         """
-        Extract contextualized embeddings from audio waveform, optionally
-        averaging across a subset of the final transformer layers.
+        Extract contextualized embeddings from audio waveform, averaging
+        across the specified range of transformer layers.
 
         Args:
             audio_waveform: Audio signal as numpy array
@@ -116,26 +145,22 @@ class Wav2Vec2WavLmExtractor:
         with context_manager, torch.no_grad():
             outputs = self.model(**inputs, output_hidden_states=True)
 
-        if self.use_last_x_layers is None or self.use_last_x_layers <= 1:
-            # Default: Use the last hidden state (final layer output)
-            embeddings = outputs.last_hidden_state
-        else:
-            # Advanced: Average across the last X internal layers
-            # hidden_states contains the initial embedding + num_layers outputs.
-            # We skip the first element (initial embedding)
-            hidden_states = outputs.hidden_states[1:]
+        # Average across specified layer range (default: all layers)
+        # hidden_states contains the initial embedding + num_layers outputs.
+        # We skip the first element (initial embedding), so indices become 0..num_layers-1
+        hidden_states = outputs.hidden_states[1:]
 
-            # Calculate slice: e.g., if num_layers=24 and X=10, we slice from index 14 onwards.
-            slice_start_index = self._num_layers - self.use_last_x_layers
+        effective_min = self.layer_min if self.layer_min is not None else 0
+        effective_max = self.layer_max if self.layer_max is not None else self._num_layers - 1
 
-            # Select the layers to average
-            selected_layers = hidden_states[slice_start_index:]
+        # Slice is inclusive on both ends, so we need max+1 for Python slicing
+        selected_layers = hidden_states[effective_min:effective_max + 1]
 
-            # Stack tensors along a new dimension (layer index), then take the mean
-            stacked_tensors = torch.stack(selected_layers, dim=0)
+        # Stack tensors along a new dimension (layer index), then take the mean
+        stacked_tensors = torch.stack(selected_layers, dim=0)
 
-            # Compute the mean across the layer dimension
-            embeddings = torch.mean(stacked_tensors, dim=0)
+        # Compute the mean across the layer dimension
+        embeddings = torch.mean(stacked_tensors, dim=0)
 
 
         # Convert to numpy and remove batch dimension

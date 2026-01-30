@@ -31,7 +31,7 @@ python scripts/01_minimal_demo.py \
     --model wavlm-base \
     --normalize mvn \
     --window 25 \
-    --layers 12
+    --layer-min 0 --layer-max 11
 ```
 
 ### 3. Understanding the Output
@@ -52,7 +52,8 @@ Best match found in: kancl_1.wav
 | `--model` | `xlsr-53`, `xls-r-300m`, `xls-r-1b`, `xls-r-2b`, `czech`, `czech2`, `wavlm-base`, `wavlm-base-plus`, `wavlm-large` | Feature extraction model |
 | `--normalize` | `none`, `mvn`, `cmn` | Speaker normalization (mvn=mean-variance, cmn=cepstral-mean) |
 | `--window` | integer (e.g., 25) | Sakoe-Chiba DTW constraint (limits temporal deviation) |
-| `--layers` | integer (e.g., 12) | Number of last transformer layers for embeddings |
+| `--layer-min` | integer (e.g., 0) | Minimum layer index (0-based) for averaging |
+| `--layer-max` | integer (e.g., 11) | Maximum layer index (0-based) for averaging |
 | `--device` | `cpu`, `cuda` | Compute device |
 | `--top-k` | integer (default: 3) | Number of top matches per corpus file |
 
