@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, List
 
 from dtaidistance.subsequence import SubsequenceAlignment
-from dtaidistance.subsequence.dtw import subsequence_alignment
 import logging
 
 logger = logging.getLogger(__name__)
@@ -190,12 +189,9 @@ class SubsequenceDTWMatcher:
             query = query / (np.linalg.norm(query, axis=1, keepdims=True) + 1e-8)
             reference = reference / (np.linalg.norm(reference, axis=1, keepdims=True) + 1e-8)
 
-        # Perform subsequence alignment
-        sa = subsequence_alignment(query, reference, use_c=self.use_c)
-
-        # Apply Sakoe-Chiba window constraint if specified
-        if effective_window is not None:
-            sa.settings.window = effective_window
+        # Perform subsequence alignment (same parameters as match())
+        sa = SubsequenceAlignment(query, reference, penalty=0.1, use_c=self.use_c, window=effective_window)
+        sa.align()
 
         # Get kbest matches (dtaidistance supports this)
         kbest_matches = sa.kbest_matches(k=k * 3)  # Get extra to filter overlaps
