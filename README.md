@@ -2,7 +2,7 @@
 
 Query-by-Example Spoken Term Detection (QbE-STD) using self-supervised speech embeddings and Subsequence DTW matching.
 
-**Status:** Phase 1 (Foundation) Complete
+**Status:** Phase 1 (Foundation) + Evaluation Complete
 
 ---
 
@@ -22,22 +22,43 @@ conda install -c conda-forge dtaidistance
 python -c "import torch; import transformers; print('Dependencies OK')"
 ```
 
-### 2. Run Demo
+### 2. Run Batch Evaluation
+
+```bash
+python scripts/02_evaluate.py
+```
+
+Walks `data/raw_audio/` automatically, runs every query against its corpus, and writes a CSV to `results/`. Configuration (model, window, device, top-k) is hardcoded at the top of the script.
+
+### 3. Run Single-File Demo
 
 ```bash
 python scripts/01_minimal_demo.py \
-    --query data/raw_audio/queries/kanadskej_zertik_2.wav \
-    --corpus data/raw_audio/corpus/kancl_1.wav \
+    --query  data/raw_audio/<lang>/<source>/<topic>/queries/<query>.wav \
+    --corpus data/raw_audio/<lang>/<source>/<topic>/corpus/<corpus>.wav \
     --model wavlm-base \
-    --normalize mvn \
-    --window 25 \
-    --layer-min 0 --layer-max 11
+    --window 25
 ```
 
-### 3. Understanding the Output
+### 4. Understanding the Output
 
+**Batch evaluation CSV** (`results/top5_wavlm-base_cpu_window25_<timestamp>.csv`):
+
+| Column | Description |
+|--------|-------------|
+| `language` | `EN` or `CZ` |
+| `query_file` | Path to query wav (relative to project root) |
+| `query_length` | Query duration in seconds |
+| `corpus_file` | Path to corpus wav (relative to project root) |
+| `corpus_length` | Corpus duration in seconds |
+| `match_rank` | Rank 1–5 (1 = best match) |
+| `match_distance` | DTW distance (lower = better) |
+| `match_start` | Match start time in corpus (seconds) |
+| `match_end` | Match end time in corpus (seconds) |
+
+**Single-file demo:**
 ```
-Best match found in: kancl_1.wav
+Best match found in: <corpus>.wav
   Distance: 0.1234          # Lower = better match
   Time range: 5.23s - 6.45s # Where query was found
   Duration: 1.22s           # Length of match
@@ -69,6 +90,7 @@ Best match found in: kancl_1.wav
 | Speaker Normalization | Complete | MVN and CMN normalization |
 | DTW Matching | Complete | Subsequence DTW with Sakoe-Chiba constraint |
 | End-to-End Demo | Complete | Working QbE-STD pipeline |
+| Batch Evaluation | Complete | CSV output for all queries/corpora |
 
 ### Current Capabilities
 
@@ -150,31 +172,41 @@ time_sec = (frame_idx * 320) / 16000
 ## Project Structure
 
 ```
-acoustic-retrieval/
-├── README.md              ← This file
-├── requirements.txt       ← Dependencies
-├── config/
-│   └── model_config.yaml  ← Model settings
+diplomova-prace/
+├── README.md
+├── requirements.txt
 ├── src/
-│   ├── features/          ← Feature extraction
+│   ├── features/
 │   │   ├── wav2vec2_wavlm_extractor.py
 │   │   ├── audio_preprocessing.py
 │   │   ├── speaker_normalization.py
 │   │   └── frame_conversion.py
-│   ├── matching/          ← DTW matching
-│   │   ├── subsequence_dtw.py
-│   │   └── distance_metrics.py
-│   ├── indexing/          ← LSH (TODO)
-│   ├── pipeline/          ← End-to-end system (TODO)
-│   └── corpus/            ← Corpus management (TODO)
+│   └── matching/
+│       ├── subsequence_dtw.py
+│       └── distance_metrics.py
 ├── scripts/
-│   └── 01_minimal_demo.py ← Working demo
+│   ├── 01_minimal_demo.py   ← single query/corpus pair, prints results
+│   └── 02_evaluate.py       ← batch evaluation, outputs CSV
+├── results/                 ← CSV outputs from 02_evaluate.py
 └── data/
-    ├── raw_audio/
-    │   ├── queries/       ← Query audio files
-    │   └── corpus/        ← Corpus audio files
-    └── embeddings/        ← Cached features (future)
+    └── raw_audio/           ← gitignored; see required structure below
+        ├── en/
+        │   └── <source>/
+        │       └── <topic>/
+        │           ├── corpus/    ← single .wav file
+        │           └── queries/   ← one or more .wav files
+        └── cz/
+            └── <source>/
+                └── <topic>/
+                    ├── corpus/
+                    └── queries/
 ```
+
+Each topic directory contains:
+- `corpus/` — a single `.wav` file (the recording to search in)
+- `queries/` — one or more `.wav` files (spoken terms to search for)
+
+> **This directory structure is mandatory.** `02_evaluate.py` discovers all query/corpus pairs by walking `raw_audio/` and looking for `queries/` directories. The language (`EN`/`CZ`) is derived from the first path component (`en`/`cz`). Deviating from this layout will cause topics to be silently skipped.
 
 ---
 
