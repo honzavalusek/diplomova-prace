@@ -237,7 +237,7 @@ extractor = XLSRExtractor(model_name="facebook/wav2vec2-xls-r-300m")
 
 # You'll need to:
 # 1. Re-extract all corpus embeddings
-# 2. Rebuild LSH index (Phase 2)
+# 2. Rebuild LSH index
 # 3. Update downstream code expecting 1024-D
 ```
 

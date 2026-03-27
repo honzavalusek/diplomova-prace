@@ -2,7 +2,7 @@
 
 Query-by-Example Spoken Term Detection (QbE-STD) using self-supervised speech embeddings and Subsequence DTW matching.
 
-**Status:** Phase 1 (Foundation) + Evaluation Complete
+**Status:** Complete
 
 ---
 
@@ -207,27 +207,6 @@ Each topic directory contains:
 - `queries/` — one or more `.wav` files (spoken terms to search for)
 
 > **This directory structure is mandatory.** `02_evaluate.py` discovers all query/corpus pairs by walking `raw_audio/` and looking for `queries/` directories. The language (`EN`/`CZ`) is derived from the first path component (`en`/`cz`). Deviating from this layout will cause topics to be silently skipped.
-
----
-
-## Development Roadmap
-
-**Phase 1: Foundation** (Complete)
-- [x] Feature extraction (XLSR-53, WavLM)
-- [x] Speaker normalization (MVN, CMN)
-- [x] DTW matching with constraints
-- [x] Minimal end-to-end demo
-
-**Phase 2: Indexing** (Planned)
-- [ ] MinHash LSH prototype
-- [ ] Learned hash functions
-- [ ] FAISS integration
-
-**Phase 3: Production** (Planned)
-- [ ] Corpus segmentation
-- [ ] Embedding caching
-- [ ] REST API
-- [ ] Docker deployment
 
 ---
 
