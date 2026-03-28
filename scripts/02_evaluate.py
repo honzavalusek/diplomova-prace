@@ -103,6 +103,24 @@ def main():
     # Create output directory if needed
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Load metadata.csv if present
+    metadata_path = data_dir / "metadata.csv"
+    metadata_present = metadata_path.is_file()
+    corpus_to_matches: dict[str, list[tuple[float, float]]] = {}  # corpus_norm → [(start, end)]
+    same_query_map: dict[tuple[str, str], list[tuple[float, float]]] = {}  # (corpus, query) → [(start, end)]
+
+    if metadata_present:
+        logger.info(f"Loading ground-truth metadata from {metadata_path}")
+        with open(metadata_path, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                c = row["corpus_file"].strip()
+                start, end = float(row["match_start"]), float(row["match_end"])
+                corpus_to_matches.setdefault(c, []).append((start, end))
+                sq = row["same_query"].strip()
+                if sq:
+                    same_query_map.setdefault((c, sq), []).append((start, end))
+        logger.info(f"Metadata loaded: {len(corpus_to_matches)} corpus files, {len(same_query_map)} same-audio pairs")
+
     # Discover all (query, corpus) pairs
     logger.info(f"Scanning {data_dir} for query/corpus pairs...")
     jobs = discover_jobs(data_dir)
@@ -127,6 +145,8 @@ def main():
 
     rows = []
 
+    TOL = 0.3
+
     for job in tqdm(jobs, desc="Evaluating queries"):
         language = job["language"]
         corpus_file = job["corpus_file"]
@@ -143,11 +163,19 @@ def main():
         query_embeddings = extractor.extract(query_audio, sr)
         query_length = len(query_audio) / sr
 
+        # Metadata-based annotation (paths relative to data/raw_audio/)
+        corpus_norm = str(corpus_file.relative_to(data_dir))
+        query_norm = str(query_file.relative_to(data_dir))
+        ref_matches = corpus_to_matches.get(corpus_norm) if metadata_present else None
+        same_refs = same_query_map.get((corpus_norm, query_norm), []) if metadata_present else []
+
         # Run top-k matching
         matches = matcher.match_top_k(query_embeddings, corpus_embeddings, k=TOP_K)
 
         for rank, match in enumerate(matches, start=1):
-            rows.append({
+            pred_start = frames_to_seconds(match.start_frame, sample_rate=16000, hop_length=extractor.hop_length)
+            pred_end = frames_to_seconds(match.end_frame, sample_rate=16000, hop_length=extractor.hop_length)
+            row = {
                 "language": language,
                 "query_file": str(query_file.relative_to(PROJECT_ROOT.parent)),
                 "query_length": query_length,
@@ -155,14 +183,30 @@ def main():
                 "corpus_length": corpus_length,
                 "match_rank": rank,
                 "match_distance": match.distance,
-                "match_start": frames_to_seconds(match.start_frame, sample_rate=16000, hop_length=extractor.hop_length),
-                "match_end": frames_to_seconds(match.end_frame, sample_rate=16000, hop_length=extractor.hop_length),
-            })
+                "match_start": pred_start,
+                "match_end": pred_end,
+            }
+            if metadata_present:
+                if ref_matches is not None:
+                    is_correct_val = any(
+                        abs(pred_start - ref_s) <= TOL and abs(pred_end - ref_e) <= TOL
+                        for ref_s, ref_e in ref_matches
+                    )
+                    is_same_val = any(
+                        abs(pred_start - ref_s) <= TOL and abs(pred_end - ref_e) <= TOL
+                        for ref_s, ref_e in same_refs
+                    )
+                else:
+                    is_correct_val = ""
+                    is_same_val = ""
+                row["is_correct (same phrase)"] = is_correct_val
+                row["is_same (same audio)"] = is_same_val
+            rows.append(row)
 
         # If fewer than TOP_K matches returned, pad with empty rows so every
         # query always has exactly TOP_K rows (distances left empty)
         for rank in range(len(matches) + 1, TOP_K + 1):
-            rows.append({
+            row = {
                 "language": language,
                 "query_file": str(query_file.relative_to(PROJECT_ROOT.parent)),
                 "query_length": query_length,
@@ -172,10 +216,16 @@ def main():
                 "match_distance": "",
                 "match_start": "",
                 "match_end": "",
-            })
+            }
+            if metadata_present:
+                row["is_correct (same phrase)"] = ""
+                row["is_same (same audio)"] = ""
+            rows.append(row)
 
     # Write CSV
     fieldnames = ["language", "query_file", "query_length", "corpus_file", "corpus_length", "match_rank", "match_distance", "match_start", "match_end"]
+    if metadata_present:
+        fieldnames += ["is_correct (same phrase)", "is_same (same audio)"]
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
