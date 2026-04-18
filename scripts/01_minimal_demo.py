@@ -20,7 +20,6 @@ import time
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.features import Wav2Vec2WavLmExtractor, load_audio, frames_to_seconds
-from src.features.speaker_normalization import apply_normalization
 from src.matching import SubsequenceDTWMatcher, MatchResult
 
 logging.basicConfig(
@@ -46,9 +45,6 @@ def main():
     parser.add_argument('--model', type=str, default='xlsr-53',
                         choices=['xlsr-53', 'xls-r-300m', 'xls-r-1b', 'xls-r-2b', 'czech', 'czech2', 'wavlm-base', 'wavlm-base-plus', 'wavlm-large'],
                         help='Feature extraction model (default: xlsr-53)')
-    parser.add_argument('--normalize', type=str, default='none',
-                        choices=['none', 'mvn', 'cmn', 'warp'],
-                        help='Speaker normalization method (mvn=mean-variance, cmn=cepstral-mean, none=disabled)')
     parser.add_argument('--window', type=int, default=None,
                         help='Sakoe-Chiba window constraint for DTW (limits temporal deviation). '
                              'Typical values: 10-50 frames for speech. If not set, no constraint is used.')
@@ -101,11 +97,6 @@ def main():
     query_audio, sr = load_audio(str(query_path))
     query_embeddings = extractor.extract(query_audio, sr)
 
-    # Apply speaker normalization if requested
-    if args.normalize != 'none':
-        logger.info(f"  Applying {args.normalize} normalization...")
-        query_embeddings = apply_normalization(query_embeddings, method=args.normalize)
-
     query_time = time.time() - start_time
     logger.info(f"  Query shape: {query_embeddings.shape}")
     logger.info(f"  Extraction time: {query_time:.2f}s")
@@ -124,10 +115,6 @@ def main():
         start_time = time.time()
         corpus_audio, sr = load_audio(str(corpus_path))
         corpus_embeddings = extractor.extract(corpus_audio, sr)
-
-        # Apply same normalization to corpus
-        if args.normalize != 'none':
-            corpus_embeddings = apply_normalization(corpus_embeddings, method=args.normalize)
 
         extract_time = time.time() - start_time
 

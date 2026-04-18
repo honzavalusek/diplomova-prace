@@ -71,7 +71,6 @@ Best match found in: <corpus>.wav
 | Option | Values | Description |
 |--------|--------|-------------|
 | `--model` | `xlsr-53`, `xls-r-300m`, `xls-r-1b`, `xls-r-2b`, `czech`, `czech2`, `wavlm-base`, `wavlm-base-plus`, `wavlm-large` | Feature extraction model |
-| `--normalize` | `none`, `mvn`, `cmn` | Speaker normalization (mvn=mean-variance, cmn=cepstral-mean) |
 | `--window` | integer (e.g., 25) | Sakoe-Chiba DTW constraint (limits temporal deviation) |
 | `--layer-min` | integer (e.g., 0) | Minimum layer index (0-based) for averaging |
 | `--layer-max` | integer (e.g., 11) | Maximum layer index (0-based) for averaging |
@@ -87,7 +86,6 @@ Best match found in: <corpus>.wav
 | Module | Status | Description |
 |--------|--------|-------------|
 | Feature Extraction | Complete | XLSR-53, XLS-R, WavLM embedding extraction |
-| Speaker Normalization | Complete | MVN and CMN normalization |
 | DTW Matching | Complete | Subsequence DTW with Sakoe-Chiba constraint |
 | End-to-End Demo | Complete | Working QbE-STD pipeline |
 | Batch Evaluation | Complete | CSV output for all queries/corpora |
@@ -98,7 +96,6 @@ Best match found in: <corpus>.wav
 - Search for spoken queries in corpus recordings
 - Get precise timestamps (start/end) of matches
 - Multiple model options (XLSR, WavLM families)
-- Speaker normalization for cross-speaker matching
 
 ### Limitations
 
@@ -113,7 +110,7 @@ Best match found in: <corpus>.wav
 ## Architecture
 
 ```
-Audio → Embedding Model → [Optional: Normalize] → [Verify: S-DTW] → Timestamps
+Audio → Embedding Model → [Verify: S-DTW] → Timestamps
               ↓
         WavLM/XLSR-53
          (768-1024D)
@@ -125,11 +122,9 @@ Audio → Embedding Model → [Optional: Normalize] → [Verify: S-DTW] → Time
    ↓
 2. Feature Extraction (WavLM/XLSR) → [768-1024D embeddings per frame]
    ↓
-3. Speaker Normalization (optional) → [MVN/CMN normalized embeddings]
+3. Subsequence DTW Matching → Find best alignment
    ↓
-4. Subsequence DTW Matching → Find best alignment
-   ↓
-5. Frame-to-Time Conversion → Precise timestamps
+4. Frame-to-Time Conversion → Precise timestamps
 ```
 
 ---
@@ -179,7 +174,6 @@ diplomova-prace/
 │   ├── features/
 │   │   ├── wav2vec2_wavlm_extractor.py
 │   │   ├── audio_preprocessing.py
-│   │   ├── speaker_normalization.py
 │   │   └── frame_conversion.py
 │   └── matching/
 │       ├── subsequence_dtw.py

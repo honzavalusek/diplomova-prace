@@ -153,15 +153,6 @@ python scripts/01_minimal_demo.py \
     --corpus corpus*.wav \
     --model czech2 \
     --window 25
-
-# With speaker normalization and window
-python scripts/01_minimal_demo.py \
-    --query query.wav \
-    --corpus corpus*.wav \
-    --model czech2 \
-    --window 25 \
-    --normalize mvn \
-    --top-k 3
 ```
 
 ## Performance Characteristics
@@ -235,15 +226,11 @@ dtaidistance (window=25):   frames 100-129, distance=0.00 ✓ CORRECT
    - `use_c=True` (default) for ~10x speedup
    - Automatically falls back to Python if C library unavailable
 
-3. **Normalize embeddings first**
-   - Apply MVN or CMN normalization before DTW
-   - Improves speaker independence
-
-4. **Set min_distance_frames in match_top_k**
+3. **Set min_distance_frames in match_top_k**
    - Prevents overlapping matches
    - Typical: 10-20 frames (0.2-0.4 seconds)
 
-5. **Convert to float64**
+4. **Convert to float64**
    - dtaidistance C library requires float64
    - Automatically handled by SubsequenceDTWMatcher
 
@@ -251,7 +238,6 @@ dtaidistance (window=25):   frames 100-129, distance=0.00 ✓ CORRECT
 
 ```python
 from src.features import Wav2Vec2WavLmExtractor, load_audio
-from src.features.speaker_normalization import apply_normalization
 from src.matching import SubsequenceDTWMatcher
 
 # 1. Load audio
@@ -269,11 +255,7 @@ extractor = Wav2Vec2WavLmExtractor(
 query_emb = extractor.extract(query_audio, sr)
 corpus_emb = extractor.extract(corpus_audio, sr)
 
-# 3. Normalize (optional but recommended)
-query_emb = apply_normalization(query_emb, method="mvn")
-corpus_emb = apply_normalization(corpus_emb, method="mvn")
-
-# 4. Match with DTW + window constraint
+# 3. Match with DTW + window constraint
 matcher = SubsequenceDTWMatcher(window=25)
 result = matcher.match(query_emb, corpus_emb)
 
