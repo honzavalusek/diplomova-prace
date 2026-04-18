@@ -237,7 +237,7 @@ dtaidistance (window=25):   frames 100-129, distance=0.00 ✓ CORRECT
 ## Example: End-to-End
 
 ```python
-from src.features import Wav2Vec2WavLmExtractor, load_audio
+from src.features import SSLSpeechExtractor, load_audio
 from src.matching import SubsequenceDTWMatcher
 
 # 1. Load audio
@@ -245,7 +245,7 @@ query_audio, sr = load_audio("query.wav")
 corpus_audio, sr = load_audio("corpus.wav")
 
 # 2. Extract embeddings (use layers 2-11 for averaging)
-extractor = Wav2Vec2WavLmExtractor(
+extractor = SSLSpeechExtractor(
     model_name="fav-kky/wav2vec2-base-cs-80k-ClTRUS",
     layer_min=2,
     layer_max=11,

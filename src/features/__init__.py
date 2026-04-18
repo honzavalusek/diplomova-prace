@@ -1,11 +1,11 @@
-"""Feature extraction module for XLSR and XLS-R embeddings"""
+"""Feature extraction module for self-supervised speech embeddings"""
 
-from .wav2vec2_wavlm_extractor import Wav2Vec2WavLmExtractor
+from .ssl_speech_extractor import SSLSpeechExtractor
 from .audio_preprocessing import load_audio
 from .frame_conversion import frames_to_seconds
 
 __all__ = [
-    'Wav2Vec2WavLmExtractor',
+    'SSLSpeechExtractor',
     'load_audio',
     'frames_to_seconds'
 ]

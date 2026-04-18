@@ -1,4 +1,4 @@
-"""XLS-R feature extraction using Hugging Face Transformers"""
+"""Self-supervised speech embedding extraction using Hugging Face Transformers"""
 
 import torch
 import numpy as np
@@ -9,11 +9,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Wav2Vec2WavLmExtractor:
+class SSLSpeechExtractor:
     """
-    Extracts contextualized acoustic embeddings using selected model,
-    with support for averaging features across a specified range of
-    transformer layers.
+    Extracts contextualized acoustic embeddings from self-supervised speech
+    models (wav2vec2, XLS-R, XLSR-53, WavLM), with support for averaging
+    features across a specified range of transformer layers.
     """
 
     def __init__(
@@ -25,7 +25,7 @@ class Wav2Vec2WavLmExtractor:
         use_half_precision: bool = True
     ):
         """
-        Initialize the Wav2Vec2 feature extractor.
+        Initialize the SSL speech feature extractor.
 
         Args:
             model_name: Hugging Face model identifier
@@ -116,7 +116,7 @@ class Wav2Vec2WavLmExtractor:
 
         Args:
             audio_waveform: Audio signal as numpy array
-            sample_rate: Sample rate of audio (must be 16000 for XLS-R)
+            sample_rate: Sample rate of audio (must be 16000)
 
         Returns:
             Embeddings array of shape (sequence_length, embedding_dim)
@@ -125,7 +125,7 @@ class Wav2Vec2WavLmExtractor:
             ValueError: If sample rate is not 16000
         """
         if sample_rate!= 16000:
-            raise ValueError(f"Wav2Vec models require 16000 Hz, got {sample_rate} Hz")
+            raise ValueError(f"SSL speech models require 16000 Hz, got {sample_rate} Hz")
 
         # Encode audio to model input format
         inputs = self.feature_extractor(

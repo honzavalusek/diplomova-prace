@@ -172,7 +172,7 @@ diplomova-prace/
 ├── requirements.txt
 ├── src/
 │   ├── features/
-│   │   ├── wav2vec2_wavlm_extractor.py
+│   │   ├── ssl_speech_extractor.py
 │   │   ├── audio_preprocessing.py
 │   │   └── frame_conversion.py
 │   └── matching/

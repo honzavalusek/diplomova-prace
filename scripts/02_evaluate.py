@@ -23,7 +23,7 @@ from tqdm import tqdm
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.features import Wav2Vec2WavLmExtractor, load_audio, frames_to_seconds
+from src.features import SSLSpeechExtractor, load_audio, frames_to_seconds
 from src.matching import SubsequenceDTWMatcher
 
 logging.basicConfig(
@@ -132,7 +132,7 @@ def main():
 
     # Initialize model
     logger.info(f"Loading model: {MODEL_NAME} on {DEVICE}")
-    extractor = Wav2Vec2WavLmExtractor(
+    extractor = SSLSpeechExtractor(
         model_name=MODEL_NAME,
         device=DEVICE,
         use_half_precision=True

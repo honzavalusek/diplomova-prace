@@ -41,9 +41,9 @@ embeddings = extractor.extract(audio, sr=16000)
 ### XLS-R 300M
 
 ```python
-from src.features import Wav2Vec2WavLmExtractor
+from src.features import SSLSpeechExtractor
 
-extractor = Wav2Vec2WavLmExtractor(model_name="facebook/wav2vec2-xls-r-300m")
+extractor = SSLSpeechExtractor(model_name="facebook/wav2vec2-xls-r-300m")
 embeddings = extractor.extract(audio, sr=16000)
 # Output shape: (sequence_length, 1024)
 ```
@@ -64,9 +64,9 @@ embeddings = extractor.extract(audio, sr=16000)
 ### XLS-R 1B
 
 ```python
-from src.features import Wav2Vec2WavLmExtractor
+from src.features import SSLSpeechExtractor
 
-extractor = Wav2Vec2WavLmExtractor(model_name="facebook/wav2vec2-xls-r-1b", device="cuda")
+extractor = SSLSpeechExtractor(model_name="facebook/wav2vec2-xls-r-1b", device="cuda")
 embeddings = extractor.extract(audio, sr=16000)
 # Output shape: (sequence_length, 1280)
 ```
@@ -89,9 +89,9 @@ embeddings = extractor.extract(audio, sr=16000)
 ### XLS-R 2B
 
 ```python
-from src.features import Wav2Vec2WavLmExtractor
+from src.features import SSLSpeechExtractor
 
-extractor = Wav2Vec2WavLmExtractor(model_name="facebook/wav2vec2-xls-r-2b", device="cuda")
+extractor = SSLSpeechExtractor(model_name="facebook/wav2vec2-xls-r-2b", device="cuda")
 embeddings = extractor.extract(audio, sr=16000)
 # Output shape: (sequence_length, 1920)
 ```
@@ -138,16 +138,16 @@ python scripts/01_minimal_demo.py \
 ### Python API
 
 ```python
-from src.features import XLSR53FeatureExtractor, Wav2Vec2WavLmExtractor
+from src.features import XLSR53FeatureExtractor, SSLSpeechExtractor
 
 # Option 1: XLSR-53 (default)
 extractor = XLSR53FeatureExtractor()
 
 # Option 2: XLS-R 300M
-extractor = Wav2Vec2WavLmExtractor(model_name="facebook/wav2vec2-xls-r-300m")
+extractor = SSLSpeechExtractor(model_name="facebook/wav2vec2-xls-r-300m")
 
 # Option 3: XLS-R 1B (GPU)
-extractor = Wav2Vec2WavLmExtractor(
+extractor = SSLSpeechExtractor(
     model_name="facebook/wav2vec2-xls-r-1b",
     device="cuda"
 )

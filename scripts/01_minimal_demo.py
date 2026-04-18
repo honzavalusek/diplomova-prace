@@ -19,7 +19,7 @@ import time
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.features import Wav2Vec2WavLmExtractor, load_audio, frames_to_seconds
+from src.features import SSLSpeechExtractor, load_audio, frames_to_seconds
 from src.matching import SubsequenceDTWMatcher, MatchResult
 
 logging.basicConfig(
@@ -88,7 +88,7 @@ def main():
     logger.info(f"\n[1/4] Initializing {args.model} feature extractor...")
     logger.info(f"  Model: {model_name}")
 
-    extractor = Wav2Vec2WavLmExtractor(model_name=model_name, device=args.device, layer_min=args.layer_min, layer_max=args.layer_max, use_half_precision=True)
+    extractor = SSLSpeechExtractor(model_name=model_name, device=args.device, layer_min=args.layer_min, layer_max=args.layer_max, use_half_precision=True)
     logger.info(f"  Embedding dimension: {extractor.embedding_dim}")
 
     # Step 2: Extract query embeddings
