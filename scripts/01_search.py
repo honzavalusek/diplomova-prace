@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 """
-Minimal End-to-End Demo: Query-by-Example Spoken Term Detection
-
-This script demonstrates the core acoustic retrieval pipeline WITHOUT LSH indexing.
-Use this to validate the approach on 2-3 small audio files before scaling up.
+Single-query QbE-STD search: match one query against one or more corpus files.
 
 Usage:
-    python scripts/01_minimal_demo.py --query data/raw_audio/queries/query1.wav \
-                                       --corpus data/raw_audio/corpus/*.wav
+    python scripts/01_search.py --query data/raw_audio/queries/query1.wav \
+                                --corpus data/raw_audio/corpus/*.wav
 """
 
 import sys
@@ -32,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Minimal QbE-STD Demo')
+    parser = argparse.ArgumentParser(description='QbE-STD Single-Query Search')
     parser.add_argument('--query', type=str, required=True,
                         help='Path to query audio file')
     parser.add_argument('--corpus', type=str, nargs='+', required=True,
@@ -68,7 +65,7 @@ def main():
             return 1
 
     logger.info("=" * 60)
-    logger.info("MINIMAL QbE-STD DEMO (No LSH)")
+    logger.info("QbE-STD SEARCH")
     logger.info("=" * 60)
 
     # Step 1: Initialize feature extractor

@@ -30,10 +30,10 @@ python scripts/02_evaluate.py
 
 Walks `data/raw_audio/` automatically, runs every query against its corpus, and writes a CSV to `results/`. Configuration (model, window, device, top-k) is hardcoded at the top of the script.
 
-### 3. Run Single-File Demo
+### 3. Run Single-Query Search
 
 ```bash
-python scripts/01_minimal_demo.py \
+python scripts/01_search.py \
     --query  data/raw_audio/<lang>/<source>/<topic>/queries/<query>.wav \
     --corpus data/raw_audio/<lang>/<source>/<topic>/corpus/<corpus>.wav \
     --model wavlm-base \
@@ -179,7 +179,7 @@ diplomova-prace/
 │       ├── subsequence_dtw.py
 │       └── distance_metrics.py
 ├── scripts/
-│   ├── 01_minimal_demo.py   ← single query/corpus pair, prints results
+│   ├── 01_search.py         ← single query/corpus pair, prints results
 │   └── 02_evaluate.py       ← batch evaluation, outputs CSV
 ├── results/                 ← CSV outputs from 02_evaluate.py
 └── data/

@@ -27,17 +27,17 @@ result = matcher.match(query_emb, ref_emb, window=50)
 results = matcher.match_top_k(query_emb, ref_emb, k=3, window=30)
 ```
 
-### 2. In Minimal Demo Script
+### 2. In Search Script
 
 ```bash
 # Use window constraint of 25 frames
-python scripts/01_minimal_demo.py \
+python scripts/01_search.py \
     --query query.wav \
     --corpus corpus.wav \
     --window 25
 
 # No window constraint (default if --window is not specified)
-python scripts/01_minimal_demo.py \
+python scripts/01_search.py \
     --query query.wav \
     --corpus corpus.wav
 ```

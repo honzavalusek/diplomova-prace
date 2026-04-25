@@ -142,13 +142,13 @@ for file_idx, match in results:
 
 ```bash
 # Basic usage
-python scripts/01_minimal_demo.py \
+python scripts/01_search.py \
     --query query.wav \
     --corpus corpus1.wav corpus2.wav \
     --model czech2
 
 # With window constraint
-python scripts/01_minimal_demo.py \
+python scripts/01_search.py \
     --query query.wav \
     --corpus corpus*.wav \
     --model czech2 \

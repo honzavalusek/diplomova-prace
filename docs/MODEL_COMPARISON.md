@@ -113,22 +113,22 @@ embeddings = extractor.extract(audio, sr=16000)
 
 ## Usage in Scripts
 
-### Command Line (Demo Script)
+### Command Line (Search Script)
 
 ```bash
 # Default: XLSR-53
-python scripts/01_minimal_demo.py \
+python scripts/01_search.py \
     --query query.wav \
     --corpus corpus/*.wav
 
 # Use XLS-R 300M
-python scripts/01_minimal_demo.py \
+python scripts/01_search.py \
     --query query.wav \
     --corpus corpus/*.wav \
     --model xls-r-300m
 
 # Use XLS-R 1B (GPU recommended)
-python scripts/01_minimal_demo.py \
+python scripts/01_search.py \
     --query query.wav \
     --corpus corpus/*.wav \
     --model xls-r-1b \
