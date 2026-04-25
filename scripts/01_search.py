@@ -40,7 +40,7 @@ def main():
     parser.add_argument('--top-k', type=int, default=3,
                         help='Number of top matches to find per corpus file (default: 3)')
     parser.add_argument('--model', type=str, default='xlsr-53',
-                        choices=['xlsr-53', 'xls-r-300m', 'xls-r-1b', 'xls-r-2b', 'czech', 'czech2', 'wavlm-base', 'wavlm-base-plus', 'wavlm-large'],
+                        choices=['xlsr-53', 'xls-r-300m', 'xls-r-1b', 'xls-r-2b', 'wavlm-base', 'wavlm-base-plus', 'wavlm-large'],
                         help='Feature extraction model (default: xlsr-53)')
     parser.add_argument('--window', type=int, default=None,
                         help='Sakoe-Chiba window constraint for DTW (limits temporal deviation). '
@@ -74,8 +74,6 @@ def main():
         'xls-r-300m': 'facebook/wav2vec2-xls-r-300m',
         'xls-r-1b': 'facebook/wav2vec2-xls-r-1b',
         'xls-r-2b': 'facebook/wav2vec2-xls-r-2b',
-        'czech': 'arampacha/wav2vec2-large-xlsr-czech',
-        'czech2': 'fav-kky/wav2vec2-base-cs-80k-ClTRUS',
         'wavlm-base': 'microsoft/wavlm-base',
         'wavlm-base-plus': 'microsoft/wavlm-base-plus',
         'wavlm-large': 'microsoft/wavlm-large',

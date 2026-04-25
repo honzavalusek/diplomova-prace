@@ -19,7 +19,7 @@ python scripts/01_search.py \
 
 | Option | Values | Description |
 |--------|--------|-------------|
-| `--model` | `xlsr-53`, `xls-r-300m`, `xls-r-1b`, `xls-r-2b`, `czech`, `czech2`, `wavlm-base`, `wavlm-base-plus`, `wavlm-large` | Feature extraction model |
+| `--model` | `xlsr-53`, `xls-r-300m`, `xls-r-1b`, `xls-r-2b`, `wavlm-base`, `wavlm-base-plus`, `wavlm-large` | Feature extraction model |
 | `--window` | integer (e.g., 25) | Sakoe-Chiba DTW constraint (limits temporal deviation) |
 | `--layer-min` | integer (e.g., 0) | Minimum layer index (0-based) for averaging |
 | `--layer-max` | integer (e.g., 11) | Maximum layer index (0-based) for averaging |
