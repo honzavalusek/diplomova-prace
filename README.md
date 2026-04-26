@@ -32,27 +32,8 @@ diplomova-prace/
 │       └── distance_metrics.py
 ├── scripts/
 │   ├── search.py            ← single query/corpus pair, prints results
-│   └── 02_evaluate.py       ← batch evaluation, outputs CSV
-├── docs/
-│   ├── usage.md
-│   └── architecture.md
-├── results/                 ← CSV outputs from 02_evaluate.py
-└── data/
-    └── raw_audio/           ← gitignored; see required structure below
-        ├── en/
-        │   └── <source>/
-        │       └── <topic>/
-        │           ├── corpus/    ← single .wav file
-        │           └── queries/   ← one or more .wav files
-        └── cz/
-            └── <source>/
-                └── <topic>/
-                    ├── corpus/
-                    └── queries/
+│   └── batch_evaluate.py    ← batch evaluation, outputs CSV
+└── docs/
+    ├── usage.md
+    └── architecture.md
 ```
-
-Each topic directory contains:
-- `corpus/` — a single `.wav` file (the recording to search in)
-- `queries/` — one or more `.wav` files (spoken terms to search for)
-
-> **This directory structure is mandatory.** `02_evaluate.py` discovers all query/corpus pairs by walking `raw_audio/` and looking for `queries/` directories. The language (`EN`/`CZ`) is derived from the first path component (`en`/`cz`). Deviating from this layout will cause topics to be silently skipped.
