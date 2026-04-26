@@ -31,7 +31,7 @@ diplomova-prace/
 │       ├── subsequence_dtw.py
 │       └── distance_metrics.py
 ├── scripts/
-│   ├── 01_search.py         ← single query/corpus pair, prints results
+│   ├── search.py            ← single query/corpus pair, prints results
 │   └── 02_evaluate.py       ← batch evaluation, outputs CSV
 ├── docs/
 │   ├── usage.md

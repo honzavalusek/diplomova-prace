@@ -2,13 +2,13 @@
 
 Two scripts live in `scripts/`:
 
-- `01_search.py` — search a single query against a single corpus file and print top matches.
+- `search.py` — search a single query against a single corpus file and print top matches.
 - `02_evaluate.py` — walk `data/raw_audio/` and run every query against its corpus, writing results to a CSV.
 
-## Single-query search (`01_search.py`)
+## Single-query search (`search.py`)
 
 ```bash
-python scripts/01_search.py \
+python scripts/search.py \
     --query  data/raw_audio/<lang>/<source>/<topic>/queries/<query>.wav \
     --corpus data/raw_audio/<lang>/<source>/<topic>/corpus/<corpus>.wav \
     --model wavlm-base \
