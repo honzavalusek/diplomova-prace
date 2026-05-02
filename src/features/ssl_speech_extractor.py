@@ -156,11 +156,10 @@ class SSLSpeechExtractor:
         # Slice is inclusive on both ends, so we need max+1 for Python slicing
         selected_layers = hidden_states[effective_min:effective_max + 1]
 
-        # Stack tensors along a new dimension (layer index), then take the mean
-        stacked_tensors = torch.stack(selected_layers, dim=0)
-
-        # Compute the mean across the layer dimension
-        embeddings = torch.mean(stacked_tensors, dim=0)
+        # Average across selected layers without materializing a stacked tensor.
+        # Equivalent to mean(stack(selected_layers), dim=0) but avoids the
+        # O(num_selected_layers) transient allocation.
+        embeddings = sum(selected_layers) / len(selected_layers)
 
 
         # Convert to numpy and remove batch dimension
