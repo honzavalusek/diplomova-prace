@@ -99,10 +99,11 @@ class SSLSpeechExtractor:
                     f"layer_min ({self.layer_min}) must be <= layer_max ({self.layer_max})."
                 )
 
-        # Log layer selection
-        effective_min = self.layer_min if self.layer_min is not None else 0
-        effective_max = self.layer_max if self.layer_max is not None else max_layer_idx
-        logger.info(f"Features will be averaged across layers {effective_min} to {effective_max}.")
+        # Cache the resolved layer range so we don't recompute it on every call
+        self._layer_min_eff = self.layer_min if self.layer_min is not None else 0
+        self._layer_max_eff = self.layer_max if self.layer_max is not None else max_layer_idx
+        self._num_selected = self._layer_max_eff - self._layer_min_eff + 1
+        logger.info(f"Features will be averaged across layers {self._layer_min_eff} to {self._layer_max_eff}.")
 
 
     def extract(
@@ -124,50 +125,49 @@ class SSLSpeechExtractor:
         Raises:
             ValueError: If sample rate is not 16000
         """
-        if sample_rate!= 16000:
+        if sample_rate != 16000:
             raise ValueError(f"SSL speech models require 16000 Hz, got {sample_rate} Hz")
 
-        # Encode audio to model input format
         inputs = self.feature_extractor(
             audio_waveform,
             sampling_rate=sample_rate,
             return_tensors="pt",
-            padding=True
+            padding=True,
         )
-
-        # Move inputs to device
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-        # Use torch.autocast for mixed precision if enabled
-        context_manager = torch.autocast(device_type=self.device, dtype=self.dtype)
+        embeddings = self._forward_with_layer_mean(inputs)
 
-        # Extract features without gradient computation
-        with context_manager, torch.no_grad():
-            outputs = self.model(**inputs, output_hidden_states=True)
-
-        # Average across specified layer range (default: all layers)
-        # hidden_states contains the initial embedding + num_layers outputs.
-        # We skip the first element (initial embedding), so indices become 0..num_layers-1
-        hidden_states = outputs.hidden_states[1:]
-
-        effective_min = self.layer_min if self.layer_min is not None else 0
-        effective_max = self.layer_max if self.layer_max is not None else self._num_layers - 1
-
-        # Slice is inclusive on both ends, so we need max+1 for Python slicing
-        selected_layers = hidden_states[effective_min:effective_max + 1]
-
-        # Average across selected layers without materializing a stacked tensor.
-        # Equivalent to mean(stack(selected_layers), dim=0) but avoids the
-        # O(num_selected_layers) transient allocation.
-        embeddings = sum(selected_layers) / len(selected_layers)
-
-
-        # Convert to numpy and remove batch dimension
         embeddings_np = embeddings.squeeze(0).cpu().numpy()
-
         logger.debug(f"Extracted embeddings shape: {embeddings_np.shape}")
-
         return embeddings_np
+
+    def _forward_with_layer_mean(self, inputs: dict) -> torch.Tensor:
+        """
+        Run a forward pass and return the per-frame mean over the selected
+        layers, accumulating in a single tensor instead of holding every
+        layer's output via output_hidden_states=True.
+        """
+        acc: Optional[torch.Tensor] = None
+
+        def hook(_module, _input, output):
+            nonlocal acc
+            hs = output[0] if isinstance(output, tuple) else output
+            acc = hs if acc is None else acc + hs
+
+        layers = self.model.encoder.layers
+        handles = [
+            layers[i].register_forward_hook(hook)
+            for i in range(self._layer_min_eff, self._layer_max_eff + 1)
+        ]
+        try:
+            with torch.autocast(device_type=self.device, dtype=self.dtype), torch.no_grad():
+                self.model(**inputs)
+        finally:
+            for h in handles:
+                h.remove()
+
+        return acc / self._num_selected
 
     @property
     def embedding_dim(self) -> int:
