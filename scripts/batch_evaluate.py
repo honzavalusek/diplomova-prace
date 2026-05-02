@@ -67,6 +67,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--window', type=int, default=25,
                         help='Sakoe-Chiba window constraint for DTW '
                              '(default: 25). Pass a negative value to disable.')
+    parser.add_argument('--layer-min', type=int, default=None,
+                        help='Minimum layer index (0-based). If set without --layer-max, averages from this layer to the last.')
+    parser.add_argument('--layer-max', type=int, default=None,
+                        help='Maximum layer index (0-based). If set without --layer-min, averages from layer 0 to this layer.')
     parser.add_argument('--tolerance', type=float, default=0.3,
                         help='Tolerance in seconds for matching predicted spans against '
                              'metadata.csv ground truth on both start and end (default: 0.3). '
@@ -75,11 +79,15 @@ def parse_args() -> argparse.Namespace:
 
 
 def build_output_path(output_dir: Path, model_name: str, device: str,
-                      window: int | None, top_k: int) -> Path:
+                      window: int | None, top_k: int,
+                      layer_min: int | None, layer_max: int | None) -> Path:
     model_slug = model_name.split('/')[-1]
     window_part = f"window{window}" if window is not None else "windowNone"
+    layer_min_part = str(layer_min) if layer_min is not None else "min"
+    layer_max_part = str(layer_max) if layer_max is not None else "max"
+    layers_part = f"layers{layer_min_part}-{layer_max_part}"
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    return output_dir / f"top{top_k}_{model_slug}_{device}_{window_part}_{timestamp}.csv"
+    return output_dir / f"top{top_k}_{model_slug}_{device}_{window_part}_{layers_part}_{timestamp}.csv"
 
 
 def load_metadata(metadata_path: Path) -> tuple[
@@ -256,7 +264,8 @@ def main() -> int:
         return 1
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = build_output_path(output_dir, model_name, args.device, window, args.top_k)
+    output_path = build_output_path(output_dir, model_name, args.device, window, args.top_k,
+                                    args.layer_min, args.layer_max)
 
     metadata_path = input_dir / "metadata.csv"
     metadata_present = metadata_path.is_file()
@@ -281,6 +290,8 @@ def main() -> int:
     extractor = SSLSpeechExtractor(
         model_name=model_name,
         device=args.device,
+        layer_min=args.layer_min,
+        layer_max=args.layer_max,
         use_half_precision=True,
     )
     matcher = SubsequenceDTWMatcher(window=window)
