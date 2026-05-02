@@ -22,7 +22,9 @@ class SSLSpeechExtractor:
         device: Optional[str] = None,
         layer_min: Optional[int] = None,
         layer_max: Optional[int] = None,
-        use_half_precision: bool = True
+        use_half_precision: bool = True,
+        chunk_seconds: Optional[float] = 30.0,
+        chunk_overlap_seconds: float = 2.0,
     ):
         """
         Initialize the SSL speech feature extractor.
@@ -36,6 +38,12 @@ class SSLSpeechExtractor:
                        layer_min set, defaults to last layer.
             use_half_precision: Use torch.float16 for weights and computation
                                 (recommended for large models).
+            chunk_seconds: Chunk length in seconds for sliding-window inference
+                           on long inputs. None or 0 disables chunking.
+            chunk_overlap_seconds: Overlap on each side of a chunk; trimmed
+                                   from the stitched output to hide boundary
+                                   effects. Must satisfy
+                                   0 < overlap < chunk_seconds / 2.
 
         Layer selection behavior:
             - Both None: Average all layers [0, num_layers-1] (default)
@@ -105,6 +113,16 @@ class SSLSpeechExtractor:
         self._num_selected = self._layer_max_eff - self._layer_min_eff + 1
         logger.info(f"Features will be averaged across layers {self._layer_min_eff} to {self._layer_max_eff}.")
 
+        # Chunked-inference configuration
+        self.chunk_seconds = chunk_seconds
+        self.chunk_overlap_seconds = chunk_overlap_seconds
+        self._chunking_enabled = bool(chunk_seconds and chunk_seconds > 0)
+        if self._chunking_enabled and not (0 < chunk_overlap_seconds < chunk_seconds / 2):
+            raise ValueError(
+                f"chunk_overlap_seconds ({chunk_overlap_seconds}) must satisfy "
+                f"0 < overlap < chunk_seconds/2 ({chunk_seconds / 2})."
+            )
+
 
     def extract(
         self,
@@ -128,19 +146,24 @@ class SSLSpeechExtractor:
         if sample_rate != 16000:
             raise ValueError(f"SSL speech models require 16000 Hz, got {sample_rate} Hz")
 
+        if not self._chunking_enabled:
+            return self._extract_single(audio_waveform, sample_rate)
+
+        chunk_samples = int(self.chunk_seconds * sample_rate)
+        overlap_samples = int(self.chunk_overlap_seconds * sample_rate)
+        if len(audio_waveform) <= chunk_samples + 2 * overlap_samples:
+            return self._extract_single(audio_waveform, sample_rate)
+
+        return self._extract_chunked(audio_waveform, sample_rate, chunk_samples, overlap_samples)
+
+    def _preprocess(self, audio_waveform: np.ndarray, sample_rate: int) -> dict:
         inputs = self.feature_extractor(
             audio_waveform,
             sampling_rate=sample_rate,
             return_tensors="pt",
             padding=True,
         )
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
-
-        embeddings = self._forward_with_layer_mean(inputs)
-
-        embeddings_np = embeddings.squeeze(0).cpu().numpy()
-        logger.debug(f"Extracted embeddings shape: {embeddings_np.shape}")
-        return embeddings_np
+        return {k: v.to(self.device) for k, v in inputs.items()}
 
     def _forward_with_layer_mean(self, inputs: dict) -> torch.Tensor:
         """
@@ -168,6 +191,58 @@ class SSLSpeechExtractor:
                 h.remove()
 
         return acc / self._num_selected
+
+    def _extract_single(self, audio_waveform: np.ndarray, sample_rate: int) -> np.ndarray:
+        inputs = self._preprocess(audio_waveform, sample_rate)
+        embeddings = self._forward_with_layer_mean(inputs)
+        embeddings_np = embeddings.squeeze(0).cpu().numpy()
+        logger.debug(f"Extracted embeddings shape: {embeddings_np.shape}")
+        return embeddings_np
+
+    def _extract_chunked(
+        self,
+        audio_waveform: np.ndarray,
+        sample_rate: int,
+        chunk_samples: int,
+        overlap_samples: int,
+    ) -> np.ndarray:
+        # Whole-utterance normalization once up front so per-chunk forward
+        # passes see the same statistics a single-pass forward would.
+        do_normalize = getattr(self.feature_extractor, "do_normalize", False)
+        if do_normalize:
+            mean = audio_waveform.mean()
+            std = np.sqrt(audio_waveform.var() + 1e-7)
+            audio_waveform = (audio_waveform - mean) / std
+
+        overlap_frames = overlap_samples // self.hop_length
+        n = len(audio_waveform)
+        chunk_embeds: list[torch.Tensor] = []
+
+        try:
+            if do_normalize:
+                self.feature_extractor.do_normalize = False
+
+            for s in range(0, n, chunk_samples):
+                a = max(0, s - overlap_samples)
+                b = min(n, s + chunk_samples + overlap_samples)
+                is_first = s == 0
+                is_last = s + chunk_samples >= n
+
+                inputs = self._preprocess(audio_waveform[a:b], sample_rate)
+                emb = self._forward_with_layer_mean(inputs)  # (1, T, D)
+
+                T = emb.shape[1]
+                start_trim = 0 if is_first else overlap_frames
+                end_trim = T if is_last else T - overlap_frames
+                chunk_embeds.append(emb[:, start_trim:end_trim, :])
+        finally:
+            if do_normalize:
+                self.feature_extractor.do_normalize = True
+
+        full = torch.cat(chunk_embeds, dim=1)
+        embeddings_np = full.squeeze(0).cpu().numpy()
+        logger.debug(f"Extracted embeddings shape (chunked, {len(chunk_embeds)} chunks): {embeddings_np.shape}")
+        return embeddings_np
 
     @property
     def embedding_dim(self) -> int:
