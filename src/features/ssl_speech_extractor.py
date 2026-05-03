@@ -176,6 +176,7 @@ class SSLSpeechExtractor:
         def hook(_module, _input, output):
             nonlocal acc
             hs = output[0] if isinstance(output, tuple) else output
+            hs = hs.float()
             acc = hs if acc is None else acc + hs
 
         layers = self.model.encoder.layers
