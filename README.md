@@ -9,10 +9,17 @@ Query-by-Example Spoken Term Detection (QbE-STD) using self-supervised speech em
 
 ## Install
 
+Conda is recommended for managing dependencies.
+
 ```bash
+# 1. Create and activate environment
+conda create -n qbe python=3.13.11
+conda activate qbe
+
+# 2. Install requirements
 pip install -r requirements.txt
 
-# Optional: C-optimized dtaidistance
+# 3. Install C-optimized dtaidistance
 conda install -c conda-forge dtaidistance
 ```
 
